@@ -1,0 +1,13 @@
+# Minimal RTSP server for the simulated rig. Local only.
+logLevel: warn
+rtspAddress: 127.0.0.1:8554
+protocols: [tcp]
+rtmp: no
+hls: no
+webrtc: no
+srt: no
+api: no
+metrics: no
+playback: no
+paths:
+  all_others:

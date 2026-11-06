@@ -1,0 +1,15 @@
+# Example rig: 4 cameras of two kinds + 1 room microphone.
+# On real hardware, `url` comes from the camera (RTSP) and `serial` is the camera's serial
+# number or MAC. Folder names follow `name`, so recordings never depend on port order.
+output_dir: recordings
+segment_seconds: 300        # 5-minute segments: a crash loses at most the open segment
+stall_seconds: 6
+rtsp_timeout_s: 5
+event_period_s: 10          # simulator clapper interval
+
+sources:
+  - {serial: SN-WIDE-01,  name: or-wide,          kind: video, fps: 15, url: "rtsp://127.0.0.1:8554/{serial}"}
+  - {serial: SN-WIDE-02,  name: or-wide-opposite, kind: video, fps: 15, url: "rtsp://127.0.0.1:8554/{serial}"}
+  - {serial: SN-TABLE-01, name: instrument-table, kind: video, fps: 15, url: "rtsp://127.0.0.1:8554/{serial}"}
+  - {serial: SN-DETAIL-01, name: field-detail,    kind: video, fps: 15, url: "rtsp://127.0.0.1:8554/{serial}"}
+  - {serial: MIC-ROOM-01, name: room-mic,         kind: audio,          url: "rtsp://127.0.0.1:8554/{serial}"}

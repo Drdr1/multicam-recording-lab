@@ -1,0 +1,21 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: mediamtx (RTSP server)
+        run: curl -sSL https://github.com/bluenviron/mediamtx/releases/download/v1.9.3/mediamtx_v1.9.3_linux_amd64.tar.gz | tar -xz -C tools mediamtx
+      - run: pip install -r requirements.txt
+      - name: Full rig scenario + capacity tests
+        run: pytest -q
+      - name: Capacity plan
+        run: python -m mcrec.cli capacity config/capacity.or-room.yml

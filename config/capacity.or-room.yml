@@ -1,0 +1,15 @@
+# One operating room, recorded 10 h/day, kept 30 days on the workstation.
+# Edit the numbers; every result in the report follows from these lines.
+hours_per_day: 10
+retention_days: 30
+streams:
+  # PoE IP cameras, H.265 at 4K/15 fps, bitrate set on the camera
+  - {name: "room view 4K H.265",   count: 2, kind: compressed, bitrate_mbps: 8,  link: gige}
+  # instrument table / detail, 1080p H.264
+  - {name: "detail 1080p H.264",   count: 2, kind: compressed, bitrate_mbps: 6,  link: gige}
+  # uncompressed industrial camera, 2448x2048 Bayer8 at 30 fps over USB3 Vision
+  - {name: "industrial 5MP raw",   count: 1, kind: raw, width: 2448, height: 2048, fps: 30, bits_per_pixel: 8, link: usb3_gen1}
+  # RGB-D depth stream, 640x576 Y16 at 30 fps (raw over USB)
+  - {name: "RGB-D depth Y16",      count: 1, kind: raw, width: 640, height: 576, fps: 30, bits_per_pixel: 16, link: usb3_gen1}
+  # room microphone, AAC
+  - {name: "room audio",           count: 1, kind: audio, bitrate_mbps: 0.128}
