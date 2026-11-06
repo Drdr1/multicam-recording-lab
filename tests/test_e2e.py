@@ -36,6 +36,19 @@ def _spawn(*args, **kw):
     return subprocess.Popen([*PY, *args], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **kw)
 
 
+def _wait_ready(url, timeout=30.0):
+    """Block until the stream is really being published (slow CI runners need more than a sleep)."""
+    end = time.time() + timeout
+    while time.time() < end:
+        r = subprocess.run(["ffprobe", "-v", "error", "-rtsp_transport", "tcp", "-timeout", "2000000",
+                            "-show_entries", "stream=codec_type", "-of", "csv=p=0", url],
+                           capture_output=True, text=True)
+        if r.returncode == 0 and r.stdout.strip():
+            return
+        time.sleep(0.5)
+    raise RuntimeError(f"{url} never started publishing")
+
+
 def _kill(p):
     if p and p.poll() is None:
         p.send_signal(signal.SIGINT)
@@ -63,7 +76,8 @@ def session(tmp_path_factory):
         _spawn("sim-audio", "--url", f"{URL}/MIC-ROOM-01"),
     ]
     table = _spawn("sim-video", "--url", f"{URL}/SN-TABLE-01", "--offset-ms", "120")
-    time.sleep(2)
+    for serial in ("SN-WIDE-01", "SN-WIDE-02", "SN-DETAIL-01", "MIC-ROOM-01", "SN-TABLE-01"):
+        _wait_ready(f"{URL}/{serial}")
     rec = _spawn("record", str(cfg_path), "--duration", "62")
     time.sleep(25)
     _kill(table)  # unplug the instrument-table camera ...
@@ -98,10 +112,11 @@ def test_segments_cut_on_wall_clock_boundaries(session):
 
 
 def test_healthy_streams_have_no_drops_or_restarts(session):
-    _, rep, _, _ = session
+    _, rep, _, events = session
     for name in ("or-wide", "or-wide-opposite", "room-mic"):
         s = _src(rep, name)
-        assert s["restarts"] == 0, name
+        why = [e for e in events if e["source"] == name and e["event"] == "stop"]
+        assert s["restarts"] == 0, f"{name} restarted: {why}"
         assert s["interruptions"] == [], name
     assert _src(rep, "or-wide")["dropped_frames"] == 0
 
@@ -109,9 +124,10 @@ def test_healthy_streams_have_no_drops_or_restarts(session):
 def test_dropped_frames_are_counted(session):
     _, rep, _, _ = session
     s = _src(rep, "field-detail")
-    # 3 frames withheld every 8 s over ~60 s -> roughly 6-8 drop events
-    assert 4 <= s["drop_events"] <= 9
-    assert 2.5 <= s["dropped_frames"] / s["drop_events"] <= 3.5
+    # 3 frames withheld every 8 s over ~60 s -> about 7-8 bursts, ~24 frames. A burst can land
+    # across a frame boundary and show up as two shorter gaps, so check totals, not exact counts.
+    assert 5 <= s["drop_events"] <= 14
+    assert 15 <= s["dropped_frames"] <= 35
     assert s["interruptions"] == []
 
 
